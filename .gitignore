@@ -1,0 +1,4 @@
+.idea/**
+models_result/**
+runs/**
+__pycache__/
