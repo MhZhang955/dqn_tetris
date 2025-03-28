@@ -11,7 +11,7 @@ import numpy as np  # 新增导入
 
 def dqn():
     config = {
-        "episodes": 6000,
+        "episodes": 30000,
         "epsilon_stop_episode": 2000,
         "mem_size": 1000,
         "discount": 0.95,
