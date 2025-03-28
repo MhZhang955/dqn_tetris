@@ -122,34 +122,57 @@ class Tetris:
             self.game_over = True
 
     def _check_collision(self, piece, pos):
-        '''Check if there is a collision between the current piece and the board'''
         for x, y in piece:
-            x += pos[0]
-            y += pos[1]
-            if x < 0 or x >= Tetris.BOARD_WIDTH \
-                    or y < 0 or y >= Tetris.BOARD_HEIGHT \
-                    or self.board[y][x] == Tetris.MAP_BLOCK:
+            new_x = x + pos[0]
+            new_y = y + pos[1]
+            # 确保坐标在合法范围内
+            if new_x < 0 or new_x >= Tetris.BOARD_WIDTH or new_y >= Tetris.BOARD_HEIGHT:
+                return True
+            if new_y >= 0 and self.board[new_y][new_x] == Tetris.MAP_BLOCK:
                 return True
         return False
 
     def _rotate(self, angle):
-        '''Change the current rotation'''
-        r = self.current_rotation + angle
+        '''Change the current rotation with wall kick'''
+        original_rotation = self.current_rotation
+        original_pos = self.current_pos.copy()
 
-        if r == 360:
-            r = 0
-        if r < 0:
-            r += 360
-        elif r > 360:
-            r -= 360
+        # 计算新角度
+        r = self.current_rotation + angle
+        r %= 360  # 规范化角度到[0, 360)
+
+        # 获取新旧旋转的形状
+        old_piece = self._get_rotated_piece()
+        self.current_rotation = r
+        new_piece = self._get_rotated_piece()
+
+        # 计算边界越界量
+        min_x = min(p[0] + self.current_pos[0] for p in new_piece)
+        max_x = max(p[0] + self.current_pos[0] for p in new_piece)
+        offset = 0
+
+        if max_x >= Tetris.BOARD_WIDTH:
+            offset = Tetris.BOARD_WIDTH - 1 - max_x
+        elif min_x < 0:
+            offset = -min_x
+
+        # 尝试修正位置
+        self.current_pos[0] += offset
+
+        # 如果修正后仍碰撞，则回滚旋转
+        if self._check_collision(new_piece, self.current_pos):
+            self.current_rotation = original_rotation
+            self.current_pos = original_pos
 
         self.current_rotation = r
 
     def _add_piece_to_board(self, piece, pos):
-        '''Place a piece in the board, returning the resulting board'''
         board = [x[:] for x in self.board]
         for x, y in piece:
-            board[y + pos[1]][x + pos[0]] = Tetris.MAP_BLOCK
+            bx = x + pos[0]
+            by = y + pos[1]
+            if 0 <= by < Tetris.BOARD_HEIGHT and 0 <= bx < Tetris.BOARD_WIDTH:
+                board[by][bx] = Tetris.MAP_BLOCK
         return board
 
     def _clear_lines(self, board):
@@ -228,6 +251,16 @@ class Tetris:
     def get_action_size(self):
         '''Returns the size of the action space'''
         return len(self.TETROMINOS)
+
+    def _get_complete_board(self):
+        '''Returns the complete board, including the current piece'''
+        piece = self._get_rotated_piece()
+        piece = [np.add(x, self.current_pos) for x in piece]
+        board = [x[:] for x in self.board]
+        for x, y in piece:
+            if 0 <= x < Tetris.BOARD_WIDTH and 0 <= y < Tetris.BOARD_HEIGHT:  # 新增边界检查
+                board[y][x] = Tetris.MAP_PLAYER
+        return board
 
     def get_next_states(self):
         '''Get all possible next states'''
