@@ -177,14 +177,15 @@ class Tetris:
 
     def _clear_lines(self, board):
         '''Clears completed lines in a board'''
-        # Check if lines can be cleared
-        lines_to_clear = [index for index, row in enumerate(board) if sum(row) == Tetris.BOARD_WIDTH]
+        # 修改判断条件，确保每个格子都是MAP_BLOCK
+        lines_to_clear = [index for index, row in enumerate(board) if all(cell == Tetris.MAP_BLOCK for cell in row)]
         if lines_to_clear:
             board = [row for index, row in enumerate(board) if index not in lines_to_clear]
             # Add new lines at the top
             for _ in lines_to_clear:
                 board.insert(0, [0 for _ in range(Tetris.BOARD_WIDTH)])
         return len(lines_to_clear), board
+
 
     def _number_of_holes(self, board):
         '''Number of holes in the board (empty sqquare with at least one block above it)'''
